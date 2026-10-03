@@ -114,7 +114,7 @@ li {
 /* ---------- Features list: responsive CSS Grid cards ---------- */
 .features {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minimax(180px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 1rem;
     list-style: none;
     padding: 0;
