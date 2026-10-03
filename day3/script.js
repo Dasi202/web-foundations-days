@@ -92,3 +92,71 @@ function addNote(text, category) {
   console.log(`addNote("${trimmed}", "${category}") → true: note added.`);
   return true;
 }
+
+// testing wiconsole log = expected results shown as comments
+console.log('=== 1. searchNotes("milk") ===');
+console.log(searchNotes("milk"));
+// → [ { id: 1, text: 'Buy milk and bread', category: 'personal' } ]
+
+console.log('\n=== 1b. searchNotes("JAVASCRIPT") (case-insensitive) ===');
+console.log(searchNotes("JAVASCRIPT"));
+// → [ { id: 4, text: 'Revise JavaScript arrays', category: 'study' } ]
+
+console.log('\n=== 1c. searchNotes("xyz") (no match) ===');
+console.log(searchNotes("xyz"));
+// → []
+
+console.log('\n=== 2. longestNote() ===');
+console.log(longestNote());
+// → { id: 3, text: 'Email the project report to Grace', category: 'work' }
+
+console.log('\n=== 3. countByCategory() ===');
+console.log(countByCategory());
+// → { personal: 2, study: 2, work: 1 }   (order may vary in JS objects)
+
+console.log('\n=== 4. getSummary() ===');
+console.log(getSummary());
+// → "5 notes: 2 personal, 1 work, 2 study."
+
+console.log('\n=== 5. isDuplicate("buy milk and bread") ===');
+console.log(isDuplicate("buy milk and bread"));
+// → true (ignores case and extra spaces)
+
+console.log('\n=== 5b. isDuplicate("Buy   milk and bread") (extra spaces) ===');
+console.log(isDuplicate("Buy   milk and bread"));
+// → true
+
+console.log('\n=== 5c. isDuplicate("Unique note") ===');
+console.log(isDuplicate("Unique note"));
+// → false
+
+console.log('\n=== 6. addNote tests ===');
+console.log('-- addNote("   ", "personal") --> empty text --');
+addNote("   ", "personal");
+// → false (length < 1)
+
+console.log('-- addNote("Valid new note", "work") --> should succeed --');
+addNote("Valid new note", "work");
+// → true (added, new note id:6)
+
+console.log('-- addNote("Valid new note", "study") --> duplicate --');
+addNote("Valid new note", "study");
+// → false (duplicate)
+
+console.log('-- addNote("Another note", "hobby") --> invalid category --');
+addNote("Another note", "hobby");
+// → false (invalid category)
+
+console.log('-- addNote("A".repeat(201), "study") --> too long --');
+addNote("A".repeat(201), "study");
+// → false (length > 200)
+
+// Verify that only the valid note was added (total notes = 6)
+console.log('\n=== After addNote tests: notes array ===');
+console.log(notes.map(n => ({ id: n.id, text: n.text, category: n.category })));
+// → 6 notes, including the added "Valid new note" (work)
+
+// Additional check: getSummary after adding valid note
+console.log('\n=== Final getSummary() after addition ===');
+console.log(getSummary());
+// → "6 notes: 2 personal, 2 work, 2 study."
