@@ -32,13 +32,19 @@ header h1 {
 
 /* ---------- Navigation (Flexbox row) ---------- */
 nav {
-    display: flex;
     flex-wrap: wrap;
     justify-content: center;
     align-items: center;
-    gap: 16px;
+    gap: 12px;
 }
 
+nav ul {
+    display: flex;
+    list-style-type: none;
+    gap: 16px;
+    padding: 0;
+    margin: 0;
+}
 nav a {
     color: #ffffff;
     text-decoration: none;
@@ -89,6 +95,9 @@ main h3 {
 }
 
 section {
+    background: #73eef7;
+    padding: 20px;
+    border-radius: 12px;
     margin: 2.25rem 0 1.5rem;
 }
 
@@ -105,7 +114,7 @@ li {
 /* ---------- Features list: responsive CSS Grid cards ---------- */
 .features {
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fit, minimax(180px, 1fr));
     gap: 1rem;
     list-style: none;
     padding: 0;
@@ -129,19 +138,6 @@ li {
     border-color: #b8cde0;
 }
 
-/* Two columns on wider screens */
-@media (min-width: 640px) {
-    .features {
-        grid-template-columns: repeat(180px, 1fr);
-    }
-}
-
-/* Three columns on very wide screens */
-@media (min-width: 960px) {
-    .features {
-        grid-template-columns: repeat(180px, 1fr);
-    }
-}
 
 /* ---------- Shortcuts table ---------- */
 table {
