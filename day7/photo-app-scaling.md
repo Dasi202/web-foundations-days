@@ -98,57 +98,58 @@ Photo files should **not** live inside the database because:
 **Where they go instead:** **object storage** (such as Amazon S3 or Google Cloud Storage), which is cheap, durable, and practically unlimited. The database only stores **metadata**: photo ID, owner ID, the object storage key/URL, upload time, and processing status. Files are then delivered to users through the **CDN**.
 
 ## 5. Architecture Diagram
-
+ 
 ```
-                           +-------------------+
-                           |  Users (mobile /  |
-                           |      web)         |
-                           +---------+---------+
-                                     |
-                +--------------------+---------------------+
-                | (photo files: GET)                       | (API calls: feed, upload)
-                v                                          v
-        +---------------+                         +-----------------+
-        |      CDN      |                         |  Load Balancer  |
-        +-------+-------+                         +--------+--------+
-                |  (cache miss)                            |
-                |                              +-----------+-----------+
-                |                              v           v           v
-                |                         +--------+  +--------+  +--------+
-                |                         |  App   |  |  App   |  |  App   |
-                |                         | Server |  | Server |  | Server |
-                |                         +---+----+  +---+----+  +---+----+
-                |                             |           |           |
-                |        +--------------------+-----------+-----------+------------+
-                |        |                    |                       |            |
-                |        v                    v                       v            |
-                |  +-----------+     +-----------------+      +---------------+    |
-                |  |   Cache   |     |    Database     |      |     Queue     |    |
-                |  |  (Redis)  |     |  Primary (R/W)  |      | (thumbnail    |    |
-                |  +-----------+     +--------+--------+      |    jobs)      |    |
-                |                             |  replication  +-------+-------+    |
-                |                             v                       |            |
-                |                    +-----------------+              v            |
-                |                    |  Read Replica   |      +---------------+    |
-                |                    |  (feed reads)   |      | Thumbnail     |    |
-                |                    +-----------------+      | Worker(s)     |    |
-                |                                             +-------+-------+    |
-                |                                                     |            |
-                |         +-------------------------------------------+            |
-                |         |   read original / write thumbnail                      |
-                v         v                                                        |
-        +---------------------------------+                                        |
-        |        Object Storage           |<---------------------------------------+
-        |  originals (2 MB) + thumbnails  |     store/return photo (pre-signed URL)
-        |           (50 KB)               |
-        +---------------------------------+
-
-Read path  : User -> Load Balancer -> App Server -> Cache -> (miss) Read Replica
-             User -> CDN -> (miss) Object Storage          (photo files)
-Write path : User -> Load Balancer -> App Server -> Object Storage + Primary DB + Queue
-Async path : Queue -> Thumbnail Worker -> Object Storage + Primary DB
+            +-----------------------------------------------+
+            |             USERS (mobile / web)              |
+            +---------+---------------------------+---------+
+                      |                           |
+                      | (1) photo GETs            | (2) API calls
+                      |                           | feed / upload
+                      v                           v
+                +-----------+            +-----------------+
+                |    CDN    |            |  LOAD BALANCER  |
+                +-----------+            +-----------------+
+                      |                           |
+                      |                           v
+                      | (cache miss)   +---------------------+
+                      |                |   APP SERVERS x N   |
+                      |                |     (stateless)     |
+                      |                +---------------------+
+                      |                           |
+                      |        +------------------+-------------------+
+                      |        v                  v                   v
+                      | +-------------+   +---------------+   +---------------+
+                      | |    CACHE    |   |   DATABASE    |   |     QUEUE     |
+                      | |   (Redis)   |   | PRIMARY (R/W) |   | (thumb. jobs) |
+                      | +-------------+   +---------------+   +---------------+
+                      |        |                  |                   |
+                      |        |                  | replication       |
+                      |        | (3) on miss      v                   v
+                      |        |          +---------------+   +---------------+
+                      |        +--------->| READ REPLICA  |   |   THUMBNAIL   |
+                      |                   +---------------+   |   WORKER(S)   |
+                      |                                       +---------------+
+                      |                           (5) read original,  |
+                      |                           write thumbnail     |
+                      v                                               v
+            +-----------------------------------------------------------------+
+            |                    OBJECT STORAGE (S3-style)                    |
+            |              originals ~2 MB  +  thumbnails ~50 KB              |
+            +-----------------------------------------------------------------+
 ```
-
+ 
+**How to read the diagram**
+ 
+| Label | Path | What happens |
+|-------|------|--------------|
+| (1) | Users -> CDN -> Object Storage | Photo and thumbnail files are served from the CDN edge; only a cache miss reaches object storage. |
+| (2) | Users -> Load Balancer -> App Servers | Every API call (load feed, upload, follow) is spread across stateless app servers. |
+| (3) | App Servers -> Cache -> Read Replica | Feed reads check the cache first and go to the read replica only on a miss. |
+| (4) | App Servers -> Primary DB, Queue, Object Storage | Writes: the app server saves photo metadata to the primary database, enqueues a thumbnail job, and gives the client a pre-signed URL so the 2 MB original is uploaded straight to object storage. |
+| (5) | Queue -> Thumbnail Workers -> Object Storage | Workers pull jobs, read the original, write the 50 KB thumbnail, and update the database. |
+ 
+The primary database replicates to the read replica, so reads and writes are served by different machines.
 ## 6. Components
 
 - **CDN:** it solves slow and expensive photo delivery by caching photos at edge locations close to users, which also removes most download traffic from our servers.
