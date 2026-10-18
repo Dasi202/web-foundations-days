@@ -98,7 +98,7 @@ Photo files should **not** live inside the database because:
 **Where they go instead:** **object storage** (such as Amazon S3 or Google Cloud Storage), which is cheap, durable, and practically unlimited. The database only stores **metadata**: photo ID, owner ID, the object storage key/URL, upload time, and processing status. Files are then delivered to users through the **CDN**.
 
 ## 5. Architecture Diagram
- 
+
 ```
             +-----------------------------------------------+
             |             USERS (mobile / web)              |
@@ -138,9 +138,9 @@ Photo files should **not** live inside the database because:
             |              originals ~2 MB  +  thumbnails ~50 KB              |
             +-----------------------------------------------------------------+
 ```
- 
+
 **How to read the diagram**
- 
+
 | Label | Path | What happens |
 |-------|------|--------------|
 | (1) | Users -> CDN -> Object Storage | Photo and thumbnail files are served from the CDN edge; only a cache miss reaches object storage. |
@@ -148,9 +148,10 @@ Photo files should **not** live inside the database because:
 | (3) | App Servers -> Cache -> Read Replica | Feed reads check the cache first and go to the read replica only on a miss. |
 | (4) | App Servers -> Primary DB, Queue, Object Storage | Writes: the app server saves photo metadata to the primary database, enqueues a thumbnail job, and gives the client a pre-signed URL so the 2 MB original is uploaded straight to object storage. |
 | (5) | Queue -> Thumbnail Workers -> Object Storage | Workers pull jobs, read the original, write the 50 KB thumbnail, and update the database. |
- 
+
 The primary database replicates to the read replica, so reads and writes are served by different machines.
-## 6. Components
+
+## 6. Components, One Sentence Each
 
 - **CDN:** it solves slow and expensive photo delivery by caching photos at edge locations close to users, which also removes most download traffic from our servers.
 - **Load Balancer:** it solves the single-point-of-failure and overload problem by spreading incoming requests across many app servers and skipping unhealthy ones.
